@@ -1,0 +1,22 @@
+{
+	"manifest_version": 2,
+	"name": "NTHU OAuth Decaptcha",
+	"description": "Decaptcha the captcha code on NTHU OAuth page and automatically applied the value on the form.",
+	"version": "1.2",
+	"icons": {
+		"16": "images/icon16.png",
+		"32": "images/icon32.png",
+		"48": "images/icon48.png",
+		"128": "images/icon128.png"
+	},
+	"background": {
+		"scripts": ["background.js"]
+	},
+	"permissions": [
+		"webRequest",
+		"scripting",
+		"webNavigation",
+		"https://oauth.ccxp.nthu.edu.tw/v1.1/authorize.php",
+		"https://nthu-oauth-decaptcha.justin0u0.com:8443/decaptcha"
+	]
+}
