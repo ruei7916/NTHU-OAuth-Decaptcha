@@ -1,25 +1,43 @@
+const decaptcha = async(maxRetries = 10) => {
+	for (let i = 0; i < maxRetries; ++i) {
+		if (typeof tf === 'undefined') {
+			await new Promise(resolve => setTimeout(resolve, 100));
+		}
+	}
 
-// const baseURL = 'https://nthu-oauth-decaptcha.justin0u0.workers.dev/decaptcha';
-const baseURL = 'https://nthu-oauth-decaptcha.justin0u0.com:8443/decaptcha';
+	const model = await tf.loadLayersModel(chrome.runtime.getURL('/model/model.json'));
+	const imageElement = document.getElementById('captcha_image');
 
-const parseCookie = (cookie) => cookie
-	.split(';')
-	.map((v) => v.split('='))
-	.reduce((acc, v) => {
-		acc[decodeURIComponent(v[0].trim())] = decodeURIComponent(v[1].trim());
-		return acc;
-	}, {});
+	const imageTensor = tf.browser.fromPixels(imageElement);
+	const imageArray = imageTensor.arraySync();
+	for (const row of imageArray) {
+		for (const pixel of row) {
+			pixel[0] /= 255.0;
+			pixel[1] /= 255.0;
+			pixel[2] /= 255.0;
+		}
+	}
 
-const predict = async(captchaId, sessionId) => {
-	const resp = await fetch(`${baseURL}?captchaId=${captchaId}&sessionId=${sessionId}`)
-		.then((res) => res.json());
+	const expandedImageTensor = tf.expandDims(tf.tensor(imageArray), 0);
 
-	return resp.code;
-};
+	const tensors = model.predict(expandedImageTensor);
 
-const insertCode = (code) => {
-	const captchaInput = document.getElementsByName('captcha')[0];
-	captchaInput.value = code;
+	const captchaCode = tensors.map(tensor => {
+		const [predictions] = tensor.arraySync();
+		let maxIndex = 0;
+		let maxValue = 0;
+
+		for (let i = 0; i < 10; ++i) {
+			if (predictions[i] > maxValue) {
+				maxIndex = i;
+				maxValue = predictions[i];
+			}
+		}
+
+		return `${maxIndex}`;
+	}).join('');
+
+	document.getElementById('captcha_code').value = captchaCode;
 };
 
 const requestFilter = {
@@ -29,49 +47,14 @@ const requestFilter = {
 };
 
 // on every captcha request send, insert the captcha code automatically
-// https://developer.chrome.com/docs/extensions/reference/webRequest/#event-onBeforeSendHeaders
-browser.webRequest.onBeforeSendHeaders.addListener(async(details) => {
-	if (!Array.isArray(details.requestHeaders)) {
-		return;
-	}
-
-	const cookieFromHeader = details.requestHeaders.find((h) => h.name === 'Cookie');
-	if (!cookieFromHeader) {
-		return;
-	}
-
-	// get session id from cookie
-	const cookie = parseCookie(cookieFromHeader.value);
-	const sessionId = cookie['PHPSESSID'];
-
-	// get captcha id from url
-	const url = new URL(details.url);
-	const params = new Proxy(new URLSearchParams(url.search), {
-		get: (searchParams, prop) => searchParams.get(prop),
-	});
-	const captchaId = params.id;
-
-	// predict the captcha from server
-	const code = await predict(captchaId, sessionId);
-
-	// insert the captcha code into the form
+// https://developer.chrome.com/docs/extensions/reference/webRequest/#event-onCompleted
+chrome.webRequest.onCompleted.addListener(async(details) => {
 	const injection = {
-		func: insertCode,
-		args: [code],
+		func: decaptcha,
 		target: {
 			tabId: details.tabId
 		}
 	};
-	await browser.scripting.executeScript(injection);
 
-}, requestFilter, ['requestHeaders']);
-
-const urlFilter = {
-	url: [
-		{ urlPrefix: 'https://oauth.ccxp.nthu.edu.tw/v1.1/captchaimg.php' }
-	]
-};
-
-browser.webNavigation.onBeforeNavigate.addListener((details) => {
-	// workaround to activate service worker
-}, urlFilter);
+	await chrome.scripting.executeScript(injection);
+}, requestFilter);
