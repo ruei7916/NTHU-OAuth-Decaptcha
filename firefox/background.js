@@ -1,3 +1,4 @@
+
 const decaptcha = async(maxRetries = 10) => {
 	for (let i = 0; i < maxRetries; ++i) {
 		if (typeof tf === 'undefined') {
@@ -5,7 +6,7 @@ const decaptcha = async(maxRetries = 10) => {
 		}
 	}
 
-	const model = await tf.loadLayersModel(chrome.runtime.getURL('/model/model.json'));
+	const model = await tf.loadLayersModel(browser.runtime.getURL('/model/model.json'));
 	const imageElement = document.getElementById('captcha_image');
 
 	const imageTensor = tf.browser.fromPixels(imageElement);
@@ -36,7 +37,9 @@ const decaptcha = async(maxRetries = 10) => {
 
 		return `${maxIndex}`;
 	}).join('');
-
+    
+    //console.log("captchaCode:");
+    //console.log(captchaCode);
 	document.getElementById('captcha_code').value = captchaCode;
 };
 
@@ -46,15 +49,14 @@ const requestFilter = {
 	]
 };
 
-// on every captcha request send, insert the captcha code automatically
-// https://developer.chrome.com/docs/extensions/reference/webRequest/#event-onCompleted
-chrome.webRequest.onCompleted.addListener(async(details) => {
-	const injection = {
+
+browser.webRequest.onCompleted.addListener(async(details) => {
+    const injection = {
 		func: decaptcha,
 		target: {
 			tabId: details.tabId
 		}
 	};
 
-	await chrome.scripting.executeScript(injection);
+	await browser.scripting.executeScript(injection);
 }, requestFilter);

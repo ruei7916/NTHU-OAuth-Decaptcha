@@ -1,13 +1,8 @@
 {
-	"manifest_version": 3,
+	"manifest_version": 2,
 	"name": "NTHU OAuth Decaptcha",
-    "version": "1.4",
-	"browser_specific_settings": {
-        "gecko": {
-            "id": "NTHU-OAuth-Decaptcha@nthu-oauth-decaptcha.justin0u0.com",
-            "strict_min_version": "109.0"
-        }
-    },
+    "version": "1.4.1.1",
+
 
     "description": "Decaptcha the captcha code on NTHU OAuth page and automatically applied the value on the form.",
 	
@@ -22,11 +17,10 @@
 	},
 	"permissions":[
 		"webRequest",
-		"scripting"
+		"scripting",
+        "https://oauth.ccxp.nthu.edu.tw/v1.1/authorize.php"
 	],
-	"host_permissions": [
-		"https://oauth.ccxp.nthu.edu.tw/v1.1/authorize.php"
-	],
+
 	"content_scripts": [
 		{
 			"matches": ["https://oauth.ccxp.nthu.edu.tw/v1.1/authorize.php*"],
@@ -34,9 +28,6 @@
 		}
 	],
 	"web_accessible_resources": [
-		{
-			"resources": ["/model/*"],
-			"matches": ["https://oauth.ccxp.nthu.edu.tw/*"]
-		}
+		"/model/*"
 	]
 }
